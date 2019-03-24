@@ -58,12 +58,17 @@ impl WSClient {
     let pl : LoginRequest = serde_json::from_str(msg.2.as_ref()).expect("ws > Error while parsing payload");
     let (prod, cons) = bounded_spsc_queue::make(2);
 
+
+    // preprare database request
+    let req = requests::DatabaseRequest::new(requests::RequestType::UserRequest(pl.user), prod);
+    self.db_query.send(req).expect("ws > Database down!!!");
+
+  	// hash pw while waiting for database
     let mut pw_hashed = Sha3_256::new();
     pw_hashed.input(pl.password);
     let pw_hashed = format!("{:x}", pw_hashed.result());
-    // preprare database request
-    let req = requests::DatabaseRequest::new(requests::RequestType::UserExists(pl.user.clone(), pw_hashed), prod);
-    self.db_query.send(req).expect("ws > Database down!!!");
+
+    println!("ws > waiting for db response...");
     let res : requests::ResponseType = loop {
       match cons.try_pop() {
         Some(a) => break a,
@@ -72,9 +77,10 @@ impl WSClient {
     };
 
     match res {
-      requests::ResponseType::UserExists(exists) => {
-        if exists {
-          self.out.send(format!("user.login.success|{{user: {}}}", &pl.user)).expect("User channel closed");
+      requests::ResponseType::UserGetResponse(opt_user) => {
+        if let Some(user) = opt_user {
+          println!("ws > User: {:?}", user);
+          self.out.send(format!("|user.login.success|{}", &pl.user)).expect("User channel closed");
         }
       },
       _ => eprintln!("ws > Database is dumb: send wrong Response!")
@@ -94,7 +100,8 @@ impl Handler for WSClient {
     
     match msg {
       Message::Text(t) => {
-        if let Some((uid, method, data)) = t.split("|").tuples().next() {
+        // TODO: Better way to get utf8 str than creating a new every time
+        if let Some((uid, method, data)) = t.split(std::str::from_utf8(&[31]).unwrap()).tuples().next() {
           self.evaluate_message((uid.to_owned(), method.to_owned(), data.to_owned()));
         }
         else {

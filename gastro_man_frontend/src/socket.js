@@ -41,7 +41,7 @@ export default {
     if (sessionID == undefined || sessionID.length < 10) {
       sessionID = 0
     } 
-    return `${sessionID}|${messsage}|${JSON.stringify(data)}`
+    return `${sessionID}\u001f${messsage}\u001f${JSON.stringify(data)}`
   }
 
 }

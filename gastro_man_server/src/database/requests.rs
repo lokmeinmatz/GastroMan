@@ -1,13 +1,13 @@
 use bounded_spsc_queue::{Producer};
-
+use crate::users::User;
 
 #[derive(Debug)]
 pub enum RequestType {
-  UserExists(String, String)
+  UserGetRequest(String)
 }
 
 pub enum ResponseType {
-  UserExists(bool)
+  UserGetResponse(Option<(String, User)>)
 }
 
 pub struct DatabaseRequest {

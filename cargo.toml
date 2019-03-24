@@ -1,0 +1,4 @@
+[workspace]
+members = [
+    "gastro_man_server"
+]

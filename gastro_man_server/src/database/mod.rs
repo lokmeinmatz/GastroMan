@@ -1,14 +1,16 @@
 use colored::*;
-use sqlite::Readable;
 use sha3::{Digest, Sha3_256};
 
 use std::collections::HashSet;
 use std::sync::mpsc;
+use std::collections::HashMap;
 use crate::users::User;
 use bounded_spsc_queue::{Producer};
 
 pub mod requests;
 use requests::{DatabaseRequest, RequestType, ResponseType};
+
+mod sessions;
 
 #[derive(Debug)]
 pub enum UserError {
@@ -20,7 +22,8 @@ pub enum UserError {
 
 pub struct DBManager {
   con: sqlite::Connection,
-  db_query: (mpsc::Sender<DatabaseRequest>, mpsc::Receiver<DatabaseRequest>)
+  db_query: (mpsc::Sender<DatabaseRequest>, mpsc::Receiver<DatabaseRequest>),
+  sessions: HashMap<String, User>
 }
 
 impl DBManager {
@@ -28,11 +31,14 @@ impl DBManager {
     let sq = sqlite::open("current_data.sqlite")?;
 
     let query_cannel = mpsc::channel();
+   
 
-    let db = DBManager { con: sq, db_query: query_cannel };
+    
+    let db = DBManager { con: sq, db_query: query_cannel, sessions: HashMap::new() };
 
     let missing_tables = db.get_missing_required_tables();
     let usr_count = db.get_user_count();
+
 
     if missing_tables.len() > 0 {
         println!("\ndbm > The following tables are missing in current_data.sqlite: ");
@@ -61,7 +67,7 @@ impl DBManager {
         let mut h = Sha3_256::new();
         h.input(password);
 
-        let usr = User::new(username, String::from("std"), String::from("usr"), format!("{:x}", h.result()));
+        let usr = User::new(0, username, String::from("std"), String::from("usr"), format!("{:x}", h.result()));
 
         match db.add_user(usr) {
             Ok(_) => println!("dbm > You can now log in with this credentials."),
@@ -77,12 +83,13 @@ impl DBManager {
   }
 
   pub fn run(&mut self) {
+    println!("dbm > database-manager running");
     loop {
       match self.db_query.1.recv() {
         Ok(req) => {
           println!("dbm > Processing Request {:?}", req);
           match req.req {
-            RequestType::UserExists(user, pw_hashed) => self.handle_user_exists(user, pw_hashed, req.answer),
+            RequestType::UserGetRequest(user_name) => self.handle_user_get(user, req.answer),
             _ => {unimplemented!()}
           }
         },
@@ -93,10 +100,24 @@ impl DBManager {
     }
   }
 
-  fn handle_user_exists(&mut self, user: String, password_hashed: String, answer: Producer<ResponseType>) {
-    let mut stmt = self.con.prepare("SELECT * FROM users WHERE user_name = {} AND pw_hash = {}").expect("dbm > error while creating Statement");
-
-    if let sqlite::State::Row
+  fn handle_user_get(&mut self, user: String, password_hashed: String, answer: Producer<ResponseType>) {
+    let mut stmt = self.con.prepare(format!("SELECT * FROM users WHERE user_name = '{}' AND pw_hash = '{}'", user, password_hashed)).expect("dbm > Cant create User exists query");
+    if let sqlite::State::Row = stmt.next().unwrap() {
+      match User::from_db(stmt) {
+        Ok(usr) => {
+          // create hashed session id and store it together with user (for privelege test)
+          let sid = sessions::generate_session_id(&usr);
+          self.sessions.insert(sid, usr);
+          answer.push(ResponseType::UserExists(true));
+          println!("dbm > user exists");
+        },
+        Err(e) => {} // TODO: database error?
+      }
+    }
+    else {
+      // no use matching
+      // TODO: implement websocket response if no user matches
+    }
   }
 
 
@@ -123,7 +144,7 @@ impl DBManager {
   }
 
   pub fn get_user_count(&self) -> i64 {
-    let mut stmt = self.con.prepare("SELECT COUNT(*) FROM users").unwrap();
+    let mut stmt = self.con.prepare("SELECT COUNT(*) FROM users").expect("dbm > can't count users :(");
 
     // go to the first and only result
     stmt.next().unwrap();
@@ -133,18 +154,18 @@ impl DBManager {
 
   pub fn add_user(&self, usr : User) -> Result<(), UserError> {
     // check if user allready exists
-    let mut qry_usr = self.con.prepare(format!("SELECT * FROM users WHERE user_name = '{}'", usr.username)).map_err(|_| UserError::DBError)?;
+    let mut qry_usr = self.con.prepare(format!("SELECT * FROM users WHERE user_name = '{}'", usr.user_name)).map_err(|_| UserError::DBError)?;
    
    
     match qry_usr.next().unwrap() {
       sqlite::State::Done => {},
       sqlite::State::Row => {
-        eprintln!("User {} allready exits!", usr.username);
+        eprintln!("User {} allready exits!", usr.user_name);
         return Err(UserError::AllreadyExists);
       }
     }
 
-    self.con.execute(format!("INSERT INTO users (first_name, sec_name, user_name, pw_hash) VALUES ('{}', '{}', '{}', '{}')", usr.first_name, usr.sec_name, usr.username, usr.pw_hash)).map_err(|_| UserError::DBError)?;
+    self.con.execute(format!("INSERT INTO users (first_name, sec_name, user_name, pw_hash) VALUES ('{}', '{}', '{}', '{}')", usr.first_name, usr.sec_name, usr.user_name, usr.pw_hash)).map_err(|_| UserError::DBError)?;
 
     Ok(())
   }

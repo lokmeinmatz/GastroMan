@@ -7,7 +7,7 @@
       <p>Username</p>
       <input type="text" class="tb" v-model="username">
       <p>Password</p>
-      <input type="text" class="tb" v-model="pw">
+      <input type="password" class="tb" v-model="pw">
       <input type="button" value="Connect" id="connect" @click="try_login()">
     </div>
   </div>

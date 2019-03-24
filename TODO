@@ -1,3 +1,5 @@
 
 Todo:
   ✔ Add todo to repo @done(19-03-24 13:07)
+  ☐ Implement login @started(19-03-24 14:54)
+  ☐ Store user priveleges in the websocket client?
