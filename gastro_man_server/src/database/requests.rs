@@ -6,8 +6,10 @@ pub enum RequestType {
   UserGetRequest(String)
 }
 
+
+
 pub enum ResponseType {
-  UserGetResponse(Option<(String, User)>)
+  UserGetResponse(Option<User>)
 }
 
 pub struct DatabaseRequest {

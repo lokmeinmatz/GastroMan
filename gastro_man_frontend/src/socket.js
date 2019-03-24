@@ -1,15 +1,58 @@
 import Vue from 'vue'
 import Cookie from 'js-cookie'
 
+class Callback {
+  constructor(callback, once) {
+    this.callback = callback
+    this.once = once
+  }
+}
+
 export default {
   /**
    * @type {WebSocket}
    */
   rawsock: undefined,
 
+
+  /**
+   * @type {Map<String, Callback>}
+   */
+  _listeners: new Map(),
+
   init() {
     Vue.prototype.$socket = this
     this.try_connecting_ws()
+
+    this.rawsock.onmessage = (msg) => {
+      let [sid, method, payload] = msg.data.split('\u001f')
+
+      if (sid == undefined || method == undefined || payload == undefined) return
+      // eslint-disable-next-line
+      console.log(`Received message under session-id ${sid} with method ${method} and payload ${payload}`)
+
+      const cb = this._listeners.get(method)
+
+      const pp = JSON.parse(payload)
+
+      pp.sessionID = sid
+
+      if (cb != undefined) {
+        cb.callback(pp)
+        if (cb.once) {
+          this._listeners.delete(method)
+        }
+      }
+    }
+
+  },
+
+  addListenerConstant(method, callback) {
+    this._listeners.set(method, new Callback(callback, false))
+  },
+
+  addListenerOnce(method, callback) {
+    this._listeners.set(method, new Callback(callback, true))
   },
 
   try_connecting_ws() {
@@ -25,8 +68,8 @@ export default {
    * @param {string} username 
    * @param {string} passw 
    */
-  try_login(username, passw) {
-    let req = this.build_req('user.login', {user: username, password: passw})
+  sendLoginRequest(username, passw) {
+    let req = this.buildReq('user.login', {user: username, password: passw})
 
     this.rawsock.send(req)
   },
@@ -36,7 +79,7 @@ export default {
    * @param {String} messsage 
    * @param {Object} data 
    */
-  build_req(messsage, data) {
+  buildReq(messsage, data) {
     let sessionID = Cookie.get('sid')
     if (sessionID == undefined || sessionID.length < 10) {
       sessionID = 0

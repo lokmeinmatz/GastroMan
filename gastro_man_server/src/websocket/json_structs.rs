@@ -8,15 +8,6 @@ pub struct LoginRequest {
     pub password: String,
 }
 
-
-/// Payload contains either session-id or the cause of error
-// TODO: find cleaner way to manage Responses
-#[derive(Serialize, Deserialize, Debug)]
-pub struct LoginResponse {
-    pub success: bool,
-    pub payload: String,
-}
-
 /// The part of user-struct the client gets
 #[derive(Serialize, Deserialize, Debug)]
 pub struct WebUser {

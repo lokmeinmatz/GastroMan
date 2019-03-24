@@ -2,24 +2,24 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import Cookie from 'js-cookie'
 import router from './router'
+import socket from './socket'
 
 Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
-    logged_in: false,
-    username: '',
+    userdata: undefined,
     fullscreen: false
   },
   getters: {
-    isLoggedIn: state => state.logged_in
+    isLoggedIn: state => state.userdata != undefined
   },
   mutations: {
     setLoggedIn(state, login_data) {
       state.logged_in = login_data != undefined
-      state.username = login_data.username
+      state.userdata = login_data
       Cookie.set('user', login_data.username)
-      Cookie.set('sid', login_data.sid)
+      Cookie.set('sid', login_data.sessionID)
     },
 
     logOut(state) {
@@ -67,6 +67,16 @@ export default new Vuex.Store({
     }
   },
   actions: {  
-
+    tryLoginAsync(context, {username, password}) {
+      return new Promise((resolve, reject) => {
+        // eslint-disable-next-line
+        socket.addListenerOnce('user.login.success', (r) => {
+          context.commit('setLoggedIn', r)
+          resolve(r)
+        })
+        socket.addListenerOnce('user.login.error', (e) => {reject(e)})
+        socket.sendLoginRequest(username, password)
+      })
+    }
   }
 })

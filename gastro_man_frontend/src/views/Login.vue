@@ -27,14 +27,9 @@ export default {
       if (this.username.length == 0 || this.pw.length == 0) return
       // eslint-disable-next-line
       console.log('Trying to login...')
-      this.$socket.try_login(this.username, this.pw)
-      this.onLoggedIn(this.username, 'asdfgh12345')
-    },
-
-    onLoggedIn(username, sid) {
-      this.$store.commit('setLoggedIn', {username: username, sid: sid})
-      
-      this.$router.push('/')
+      //this.$socket.try_login(this.username, this.pw)
+      this.$store.dispatch('tryLoginAsync', {password: this.pw, username: this.username})
+      .then(() => this.$router.push('/'))
     }
   },
 

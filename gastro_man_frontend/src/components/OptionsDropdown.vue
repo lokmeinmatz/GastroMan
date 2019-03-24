@@ -1,7 +1,7 @@
 <template>
   <div id="options-dropdown">
     <img :src="userImg" id="user-profile-pic" alt="User profile">
-    <p v-if="$store.state.logged_in">{{ $store.state.username }}</p>
+    <p v-if="$store.getters.isLoggedIn">{{ $store.state.userdata.user_name }}</p>
     <p v-else>Not logged in</p>
     <button style="grid-column: 1 / span 2" @click="toggleFullscreen()">Toggle Fullscreen</button>
     <button class="logout" @click="$store.commit('logOut')" style="grid-column: 1 / span 2" v-if="$store.state.logged_in">Logout</button>

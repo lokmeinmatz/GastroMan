@@ -10,7 +10,7 @@ use bounded_spsc_queue::{Producer};
 pub mod requests;
 use requests::{DatabaseRequest, RequestType, ResponseType};
 
-mod sessions;
+pub mod sessions;
 
 #[derive(Debug)]
 pub enum UserError {
@@ -23,7 +23,7 @@ pub enum UserError {
 pub struct DBManager {
   con: sqlite::Connection,
   db_query: (mpsc::Sender<DatabaseRequest>, mpsc::Receiver<DatabaseRequest>),
-  sessions: HashMap<String, User>
+  sessions: HashMap<usize, String>
 }
 
 impl DBManager {
@@ -67,7 +67,7 @@ impl DBManager {
         let mut h = Sha3_256::new();
         h.input(password);
 
-        let usr = User::new(0, username, String::from("std"), String::from("usr"), format!("{:x}", h.result()));
+        let usr = User::new(0, None, username, String::from("std"), String::from("usr"), format!("{:x}", h.result()));
 
         match db.add_user(usr) {
             Ok(_) => println!("dbm > You can now log in with this credentials."),
@@ -89,7 +89,7 @@ impl DBManager {
         Ok(req) => {
           println!("dbm > Processing Request {:?}", req);
           match req.req {
-            RequestType::UserGetRequest(user_name) => self.handle_user_get(user, req.answer),
+            RequestType::UserGetRequest(user_name) => self.handle_user_get(user_name, req.answer),
             _ => {unimplemented!()}
           }
         },
@@ -100,15 +100,13 @@ impl DBManager {
     }
   }
 
-  fn handle_user_get(&mut self, user: String, password_hashed: String, answer: Producer<ResponseType>) {
-    let mut stmt = self.con.prepare(format!("SELECT * FROM users WHERE user_name = '{}' AND pw_hash = '{}'", user, password_hashed)).expect("dbm > Cant create User exists query");
+  fn handle_user_get(&mut self, user: String, answer: Producer<ResponseType>) {
+    let mut stmt = self.con.prepare(format!("SELECT * FROM users WHERE user_name = '{}'", user)).expect("dbm > Cant create User exists query");
     if let sqlite::State::Row = stmt.next().unwrap() {
-      match User::from_db(stmt) {
+      match User::from_db(stmt, &mut self.sessions) {
         Ok(usr) => {
-          // create hashed session id and store it together with user (for privelege test)
-          let sid = sessions::generate_session_id(&usr);
-          self.sessions.insert(sid, usr);
-          answer.push(ResponseType::UserExists(true));
+          
+          answer.push(ResponseType::UserGetResponse(Some(usr)));
           println!("dbm > user exists");
         },
         Err(e) => {} // TODO: database error?
