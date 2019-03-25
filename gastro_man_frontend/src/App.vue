@@ -2,13 +2,15 @@
   <div id="app">
     <NavBar/>
     <router-view/>
+    <settings/>
   </div>
 </template>
 <script>
 import NavBar from './components/NavBar.vue'
+import Settings from './components/Settings.vue'
 
 export default {
-  components: {NavBar},
+  components: {NavBar, Settings},
   data() {
     return {
     }
@@ -52,4 +54,18 @@ button {
   border-radius: 5px;
   cursor: pointer;
 }
+
+@media only screen and (max-width: 1200px) {
+  .el-dialog {
+    width: 70% !important;
+  }
+}
+
+@media only screen and (max-width: 600px) {
+  .el-dialog {
+    width: 100% !important;
+  }
+}
+
+
 </style>

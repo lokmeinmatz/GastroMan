@@ -9,7 +9,8 @@ Vue.use(Vuex)
 export default new Vuex.Store({
   state: {
     userdata: undefined,
-    fullscreen: false
+    fullscreen: false,
+    showSettings: false,
   },
   getters: {
     isLoggedIn: state => state.userdata != undefined
@@ -21,19 +22,21 @@ export default new Vuex.Store({
       Cookie.set('user', login_data.username)
       Cookie.set('sid', login_data.sessionID)
     },
+    showSettings(state, show) {
+      state.showSettings = show
+    },
 
     logOut(state) {
       Cookie.remove('user')
       Cookie.remove('sid')
-      state.username = ''
-      state.logged_in = false
+      state.userdata = undefined
       router.push('/login')
       // eslint-disable-next-line
       console.log('Logged out')
     },
 
-    toogleFullscreen(state) {
-      state.fullscreen = !state.fullscreen
+    setFullscreen(state, full) {
+      state.fullscreen = full
 
       const element = document.documentElement
       if (state.fullscreen) {

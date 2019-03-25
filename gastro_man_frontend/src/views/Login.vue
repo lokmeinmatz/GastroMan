@@ -1,15 +1,19 @@
 <template>
   <div class="login">
-    <div class="panel">
-      <div class="server-state" :class="stateStyle">
-        <p>{{ stateMsg }}</p>
-      </div>
-      <p>Username</p>
-      <input type="text" class="tb" v-model="username">
-      <p>Password</p>
-      <input type="password" class="tb" v-model="pw">
-      <input type="button" value="Connect" id="connect" @click="try_login()">
-    </div>
+    <el-card>
+      <el-alert :title="stateMsg" :type="stateStyle" :closable="false"/>
+      <el-form label-width="100px" :model="form">
+        <el-form-item label="Username" :required="true">
+          <el-input v-model="form.username"></el-input>
+        </el-form-item>
+        <el-form-item label="Password" :required="true">
+          <el-input v-model="form.pw" show-password></el-input>
+        </el-form-item>
+        <el-form-item label-width="0px">
+          <el-button type="primary" id="login-button" @click="try_login()" :loading="loading">Login</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
   </div>
 </template>
 <script>
@@ -17,28 +21,38 @@ export default {
   name: 'Login-View',
   data() {
     return {
-      username: '',
-      pw: ''
+      form: {
+        username: '',
+        pw: ''
+      },
+      loading: false
     }
   },
   methods: {
     try_login() {
 
-      if (this.username.length == 0 || this.pw.length == 0) return
+      if (this.form.username.length == 0 || this.form.pw.length == 0) return
       // eslint-disable-next-line
       console.log('Trying to login...')
+      this.loading = true
       //this.$socket.try_login(this.username, this.pw)
-      this.$store.dispatch('tryLoginAsync', {password: this.pw, username: this.username})
-      .then(() => this.$router.push('/'))
+      this.$store.dispatch('tryLoginAsync', {password: this.form.pw, username: this.form.username})
+      .then(() => {
+        this.$router.push('/')
+        this.loading = false
+      }).catch(() => {
+        this.loading = false
+        this.$message('Wrong credentials.')
+        })
     }
   },
 
   computed: {
     stateStyle() {
       const rs = this.$socket.rawsock.readyState
-      if (rs == 0) return 'connecting'
-      else if (rs == 1) return 'connected'
-      return 'not-connected'
+      if (rs == 0) return 'warning'
+      else if (rs == 1) return 'success'
+      return 'error'
     },
     stateMsg() {
       const rs = this.$socket.rawsock.readyState
@@ -52,29 +66,6 @@ export default {
 
 <style scoped>
 
-.server-state {
-  background-color: gray;
-  grid-column: 1 / span 2;
-  color: white;
-  height: 30px;
-  overflow: hidden;
-  line-height: 30px;
-}
-
-.server-state.connecting {
-  background-color: orange;
-}
-
-.server-state.not-connected {
-  background-color: #da222e;
-}
-
-.server-state.connected {
-  background-color: #64a718;
-}
-
-.server-state p {margin: 0;}
-
 .login {
   height: calc(100vh - 60px);
   background-color: rgb(230, 230, 230);
@@ -84,37 +75,11 @@ export default {
   justify-content: center;
 }
 
-.panel {
-  max-width: 700px;
-  max-height: 500px;
-  background-color: white;
-  border-radius: 10px;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: 1fr 2fr;
+.el-form {
+  margin-top: 15px;
 }
 
-.panel input{
-  margin: 10px;
-  padding: 5px;
-  font-size: 1rem;
-}
-
-.panel .tb {
-  border: none;
-  border-radius: 5px;
-  background-color: #eaeaea;
-}
-
-.panel #connect {
-  grid-column: 1 / span 2;
-  border: none;
-  border-radius: 5px;
-  background-color: #CBFFEE;
-  cursor: pointer;
-}
-
-.panel #connect:hover {
-  background-color: rgb(119, 255, 210);
+#login-button {
+  width: 100%;
 }
 </style>
