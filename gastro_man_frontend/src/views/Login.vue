@@ -1,8 +1,10 @@
 <template>
   <div class="login">
-    <el-card>
-      <el-alert :title="stateMsg" :type="stateStyle" :closable="false"/>
-      <el-form label-width="100px" :model="form">
+    <div class="card">
+      <div class="card-header">
+        <b-notification :type="stateStyle" :closable="false">{{stateMsg}}</b-notification>
+      </div>
+      <form>
         <el-form-item label="Username" :required="true">
           <el-input v-model="form.username"></el-input>
         </el-form-item>
@@ -12,8 +14,8 @@
         <el-form-item label-width="0px">
           <el-button type="primary" id="login-button" @click="try_login()" :loading="loading">Login</el-button>
         </el-form-item>
-      </el-form>
-    </el-card>
+      </form>
+    </div>
   </div>
 </template>
 <script>
@@ -50,9 +52,9 @@ export default {
   computed: {
     stateStyle() {
       const rs = this.$socket.rawsock.readyState
-      if (rs == 0) return 'warning'
-      else if (rs == 1) return 'success'
-      return 'error'
+      if (rs == 0) return 'is-warning'
+      else if (rs == 1) return 'is-success'
+      return 'is-danger'
     },
     stateMsg() {
       const rs = this.$socket.rawsock.readyState

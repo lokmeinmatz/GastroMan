@@ -1,8 +1,12 @@
 <template>
-  <el-menu mode="horizontal" id="nav" :router="true">
-    <el-menu-item route="/">HOME</el-menu-item>
-    <el-menu-item class="options" @click="showSettings = !showSettings">SETTINGS</el-menu-item>
-  </el-menu>
+  <nav class="navbar">
+    <div class="navbar-menu">
+      <div class="navbar-start">
+        <router-link class="navbar-item" to="/">HOME</router-link>
+        <a class="navbar-item" @click="showSettings = !showSettings">SETTINGS</a>
+      </div>
+    </div>
+  </nav>
 </template>
 <script>
 
@@ -27,8 +31,8 @@ export default {
 </script>
 
 <style>
-#nav {
-  position: fixed;
+.navbar {
+  position: fixed !important;
   top: 0px;
 }
 </style>

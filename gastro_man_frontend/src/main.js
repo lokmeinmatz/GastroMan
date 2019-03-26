@@ -3,13 +3,12 @@ import App from './App.vue'
 import router from './router'
 import store from './store'
 import Socket from './socket'
-import ElementUI from 'element-ui';
-import 'element-ui/lib/theme-chalk/index.css';
-
+import Buefy from 'buefy'
+import 'buefy/dist/buefy.css'
 
 Vue.config.productionTip = false
 
-Vue.use(ElementUI);
+Vue.use(Buefy)
 
 Socket.init()
 
