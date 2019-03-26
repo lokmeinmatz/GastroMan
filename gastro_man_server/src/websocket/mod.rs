@@ -29,16 +29,18 @@ where
   }
 }
 
+const DB_OFFLINE_ERR : &str = "ws > DB is not reachable";
+
 pub struct WSClient {
   out: Sender,
-  db_query: mpsc::Sender<requests::DatabaseRequest>,
+  db_query: mpsc::Sender<requests::DBRequest>,
 }
 
 /// (sessionID, Method, Data)
 type RawMsg = (String, String, String);
 
 impl WSClient {
-  pub fn new(out: Sender, db_query: mpsc::Sender<requests::DatabaseRequest>) -> Self {
+  pub fn new(out: Sender, db_query: mpsc::Sender<requests::DBRequest>) -> Self {
     WSClient { out, db_query }
   }
 
@@ -51,17 +53,17 @@ impl WSClient {
   }
 
   fn handle_login(&mut self, msg: RawMsg) {
-    let pl: LoginRequest =
+    let payload: LoginRequest =
       serde_json::from_str(msg.2.as_ref()).expect("ws > Error while parsing payload");
     let (prod, cons) = bounded_spsc_queue::make(2);
 
     // preprare database request
-    let req = requests::DatabaseRequest::new(requests::RequestType::UserGetRequest(pl.user), prod);
-    self.db_query.send(req).expect("ws > Database down!!!");
+    let req = requests::DBRequest::UserGetRequest(payload.user, prod);
+    self.db_query.send(req).expect(DB_OFFLINE_ERR);
 
     // hash pw while waiting for database
     let mut pw_hashed = Sha3_256::new();
-    pw_hashed.input(pl.password);
+    pw_hashed.input(payload.password);
     let pw_hashed = format!("{:x}", pw_hashed.result());
 
     println!("ws > waiting for db response...");
@@ -69,7 +71,8 @@ impl WSClient {
       match cons.try_pop() {
         Some(a) => break a,
         None => {
-          std::thread::yield_now();
+          
+          std::thread::sleep(std::time::Duration::from_millis(1));
           continue;
         }
       }
@@ -81,7 +84,11 @@ impl WSClient {
           println!("ws > User: {:?}", &user);
 
           if user.pw_hash == pw_hashed {
-            // user needs session id !!!
+            // if request came with diffrent sessionID, make sure to delete, as well as other sessions of this user
+            if msg.0.len() > 2 {
+              self.db_query.send(requests::DBRequest::DeleteSessionRequest(msg.0)).expect(DB_OFFLINE_ERR);
+              }
+    
             let sid = user
               .session_id
               .as_ref()
@@ -120,8 +127,7 @@ impl Handler for WSClient {
   }
 
   fn on_message(&mut self, msg: Message) -> Result<()> {
-    // Close the connection when we get a response from the server
-    println!("Got message: {}", msg);
+    let start_time = std::time::Instant::now();
 
     match msg {
       Message::Text(t) => {
@@ -139,6 +145,8 @@ impl Handler for WSClient {
       }
     }
 
+
+    println!("Message handling took {}s", start_time.elapsed().as_float_secs());
     Ok(())
   }
 }

@@ -11,6 +11,13 @@
       <b-switch v-model="setFullscreen" style="justify-self: center;"></b-switch>
       <p>Display page as fullscreen</p>
 
+      <b-field>
+        <b-radio-button>Waiter</b-radio-button>
+        <b-radio-button>Cook</b-radio-button>
+        <b-radio-button>Manager</b-radio-button>
+
+      </b-field>
+
       <a class="button is-warning" @click="$store.commit('logOut')" v-if="$store.state.logged_in">Logout</a>
 
     </div>

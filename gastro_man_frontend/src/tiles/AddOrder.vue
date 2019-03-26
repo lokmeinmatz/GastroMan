@@ -1,15 +1,16 @@
 <template>
   <div class="content">
-    <el-row>
-      <el-button icon="el-icon-circle-plus">
-        Whole Table
-      </el-button>
-    </el-row>
-    <el-row>
-      <el-button icon="el-icon-circle-plus">
-        Single Order
-      </el-button>
-    </el-row>
+    
+    <a class="button">
+      <span>Whole Table</span>
+      <b-icon icon="plus-circle-outline"></b-icon>
+    </a>
+  
+    <a class="button">
+      <span>Single Order</span>
+      <b-icon icon="plus-circle-outline"/>
+    </a>
+
   </div>
 </template>
 

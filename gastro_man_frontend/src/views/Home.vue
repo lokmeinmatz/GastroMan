@@ -1,6 +1,8 @@
 <template>
   <div class="home">
-    <Tile v-for="tile in tiles" :key="tile.title" :tiletype="tile" :size="{width: 2, height: 2}"/>
+    
+    <Tile v-for="tile in tiles" :key="tile.title" :tiletype="tile"/>
+    
   </div>
 </template>
 

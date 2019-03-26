@@ -35,7 +35,7 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
+  background-color: rgb(230, 230, 230);
 }
 
 body {
@@ -53,18 +53,6 @@ button {
   padding: 5px;
   border-radius: 5px;
   cursor: pointer;
-}
-
-@media only screen and (max-width: 1200px) {
-  .el-dialog {
-    width: 70% !important;
-  }
-}
-
-@media only screen and (max-width: 600px) {
-  .el-dialog {
-    width: 100% !important;
-  }
 }
 
 

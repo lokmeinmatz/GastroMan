@@ -1,5 +1,6 @@
-use colored::*;
+#![feature(duration_float)]
 
+use colored::*;
 use ws::listen;
 
 mod database;
@@ -10,7 +11,6 @@ use users::User;
 
 mod websocket;
 use websocket::WSClient;
-
 
 use std::thread;
 

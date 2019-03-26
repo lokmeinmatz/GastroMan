@@ -1,0 +1,8 @@
+CREATE TABLE "users" (
+	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+	"first_name"	TEXT NOT NULL,
+	"sec_name"	TEXT NOT NULL,
+	"user_name"	TEXT NOT NULL UNIQUE,
+	"pw_hash"	TEXT NOT NULL,
+	"perm_flags"	INTEGER NOT NULL,
+)

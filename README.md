@@ -13,3 +13,12 @@ The three blocks are separated by the UTF8-Char u001F (INFORMATION SEPARATOR ONE
     Request from frontend to server
         * user.login.success
         * user.login.error
+
+
+## UserPermissionFlags
+Read from left to right (normal binary representation) -> 1st bit is lowest bit.
+
+1. Waiter
+2. Cook
+3. Manager
+4. Admin

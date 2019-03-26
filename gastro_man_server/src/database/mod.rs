@@ -4,25 +4,26 @@ use sha3::{Digest, Sha3_256};
 use std::collections::HashSet;
 use std::sync::mpsc;
 use std::collections::HashMap;
-use crate::users::User;
+use crate::users::{User, UserPermissionFlags};
 use bounded_spsc_queue::{Producer};
 
 pub mod requests;
-use requests::{DatabaseRequest, RequestType, ResponseType};
+use requests::{DBRequest, ResponseType};
 
 pub mod sessions;
 
 #[derive(Debug)]
 pub enum UserError {
   AllreadyExists,
-  DBError
+  DBError,
+  CannotAdd,
 }
 
 
 
 pub struct DBManager {
   con: sqlite::Connection,
-  db_query: (mpsc::Sender<DatabaseRequest>, mpsc::Receiver<DatabaseRequest>),
+  db_query: (mpsc::Sender<DBRequest>, mpsc::Receiver<DBRequest>),
   sessions: HashMap<usize, String>
 }
 
@@ -57,7 +58,7 @@ impl DBManager {
                 .reversed()
         );
 
-        let username = String::from("stduser");
+        let username = String::from("admin");
         let password: String = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_millis().to_string();
 
 
@@ -67,18 +68,25 @@ impl DBManager {
         let mut h = Sha3_256::new();
         h.input(password);
 
-        let usr = User::new(0, None, username, String::from("std"), String::from("usr"), format!("{:x}", h.result()));
+        let usr = User::new(
+          0, 
+          None, 
+          username, 
+          String::from("admin"), 
+          String::from("account"), 
+          format!("{:x}", h.result()),
+          Some(UserPermissionFlags::ADMIN));
 
         match db.add_user(usr) {
             Ok(_) => println!("dbm > You can now log in with this credentials."),
-            Err(e) => eprintln!("dbm > {:?}", e)
+            Err(e) => eprintln!("dbm > Error while adding User: {:?}", e)
         }
     }
 
     Ok(db)
   }
 
-  pub fn get_query_sender(&mut self) -> mpsc::Sender<DatabaseRequest> {
+  pub fn get_query_sender(&mut self) -> mpsc::Sender<DBRequest> {
     self.db_query.0.clone()
   }
 
@@ -88,8 +96,9 @@ impl DBManager {
       match self.db_query.1.recv() {
         Ok(req) => {
           println!("dbm > Processing Request {:?}", req);
-          match req.req {
-            RequestType::UserGetRequest(user_name) => self.handle_user_get(user_name, req.answer),
+          match req {
+            DBRequest::UserGetRequest(user_name, answer) => self.handle_user_get(user_name, answer),
+            DBRequest::DeleteSessionRequest(sid) => self.delete_session(sid),
             _ => {unimplemented!()}
           }
         },
@@ -105,9 +114,8 @@ impl DBManager {
     if let sqlite::State::Row = stmt.next().unwrap() {
       match User::from_db(stmt, &mut self.sessions) {
         Ok(usr) => {
-          
-          answer.push(ResponseType::UserGetResponse(Some(usr)));
           println!("dbm > user exists");
+          answer.push(ResponseType::UserGetResponse(Some(usr)));
         },
         Err(e) => {} // TODO: database error?
       }
@@ -116,6 +124,14 @@ impl DBManager {
       // no use matching
       // TODO: implement websocket response if no user matches
     }
+  }
+
+  fn delete_session(&mut self, sid: String) {
+    let key = match self.sessions.iter().find_map(|(k, v)| {if v == &sid {Some(k)} else {None}}) {
+      Some(key) => *key,
+      None => return
+    };
+    self.sessions.remove(&key);
   }
 
 
@@ -163,7 +179,7 @@ impl DBManager {
       }
     }
 
-    self.con.execute(format!("INSERT INTO users (first_name, sec_name, user_name, pw_hash) VALUES ('{}', '{}', '{}', '{}')", usr.first_name, usr.sec_name, usr.user_name, usr.pw_hash)).map_err(|_| UserError::DBError)?;
+    self.con.execute(format!("INSERT INTO users (first_name, sec_name, user_name, pw_hash, perm_flags) VALUES ('{}', '{}', '{}', '{}', {})", usr.first_name, usr.sec_name, usr.user_name, usr.pw_hash, usr.permissions.0)).map_err(|_| UserError::CannotAdd)?;
 
     Ok(())
   }
