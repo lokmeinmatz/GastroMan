@@ -1,0 +1,16 @@
+{
+  "admin": [
+    {"title": "Manage Workers", "componentName": "ManageWorkers"}
+  ],
+  "manager": [
+
+  ],
+  "cook": [
+    {"title": "Food Queue", "componentName": "FoodQueue"},
+    {"title": "Finished Food", "componentName": "FinishedFood"}
+  ],
+  "waiter": [
+    {"title": "Add Order", "componentName": "AddOrder"},
+    {"title": "Oder List", "componentName": "OderList"}
+  ]
+}

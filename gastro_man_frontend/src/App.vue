@@ -1,7 +1,9 @@
 <template>
   <div id="app">
     <NavBar/>
-    <router-view/>
+    <transition name="main-rv" appear mode="out-in">
+      <router-view class="rv"/>
+    </transition>
     <settings/>
   </div>
 </template>
@@ -55,5 +57,26 @@ button {
   cursor: pointer;
 }
 
+.main-rv-enter-active, .main-rv-leave-active {
+  transition: transform 0.5s linear;
+}
+
+.main-rv-enter {
+  transform: translateY(-100vh);
+}
+
+.main-rv-leave-to {
+  transform: translateY(100vh);
+}
+
+
+.page-options {
+  display: flex;
+  padding: 10px;
+}
+
+.rv {
+  min-height: calc(100vh - 52px);
+}
 
 </style>

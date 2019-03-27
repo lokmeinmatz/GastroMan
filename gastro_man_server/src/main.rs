@@ -28,7 +28,7 @@ fn main() {
 
     //let clients : Vec<WSClient> = Vec::with_capacity(3);
 
-    listen("127.0.0.1:443", |out| {
+    listen("192.168.178.30:443", |out| {
         println!("new client connected");
         WSClient::new(out, local_db_query_sender.clone())
     }).unwrap();

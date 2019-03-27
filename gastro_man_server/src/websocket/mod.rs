@@ -83,7 +83,7 @@ impl WSClient {
         if let Some(user) = opt_user {
           println!("ws > User: {:?}", &user);
 
-          if user.pw_hash == pw_hashed {
+          if user.pw_hash == Some(pw_hashed) {
             // if request came with diffrent sessionID, make sure to delete, as well as other sessions of this user
             if msg.0.len() > 2 {
               self.db_query.send(requests::DBRequest::DeleteSessionRequest(msg.0)).expect(DB_OFFLINE_ERR);

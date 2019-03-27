@@ -56,7 +56,7 @@ export default {
   },
 
   try_connecting_ws() {
-    this.rawsock = new WebSocket("ws://localhost:443")
+    this.rawsock = new WebSocket("ws://192.168.178.30:443")
   },
 
   is_connected() {

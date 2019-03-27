@@ -70,7 +70,7 @@ impl DBManager {
 
         let usr = User::new(
           0, 
-          None, 
+          String::new(), 
           username, 
           String::from("admin"), 
           String::from("account"), 
@@ -178,8 +178,13 @@ impl DBManager {
         return Err(UserError::AllreadyExists);
       }
     }
-
-    self.con.execute(format!("INSERT INTO users (first_name, sec_name, user_name, pw_hash, perm_flags) VALUES ('{}', '{}', '{}', '{}', {})", usr.first_name, usr.sec_name, usr.user_name, usr.pw_hash, usr.permissions.0)).map_err(|_| UserError::CannotAdd)?;
+    match usr.pw_hash {
+      Some(pw_hash) => {
+        self.con.execute(format!("INSERT INTO users (first_name, sec_name, user_name, pw_hash, perm_flags) VALUES ('{}', '{}', '{}', '{}', {})", usr.first_name, usr.last_name, usr.user_name, pw_hash, usr.permissions.0)).map_err(|_| UserError::CannotAdd)?;
+      },
+      None => return Err(UserError::CannotAdd)
+    }
+    
 
     Ok(())
   }

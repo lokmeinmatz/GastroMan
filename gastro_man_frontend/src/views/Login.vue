@@ -81,7 +81,7 @@ export default {
 <style scoped>
 .login {
   height: calc(100vh - 60px);
-  background-color: rgb(230, 230, 230);
+  background-color: rgb(44, 178, 255);
   width: 100vw;
   display: flex;
   align-items: center;

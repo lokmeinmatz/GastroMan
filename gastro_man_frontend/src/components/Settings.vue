@@ -12,13 +12,10 @@
       <p>Display page as fullscreen</p>
 
       <b-field>
-        <b-radio-button>Waiter</b-radio-button>
-        <b-radio-button>Cook</b-radio-button>
-        <b-radio-button>Manager</b-radio-button>
-
+        <b-checkbox-button v-for="permission in validPermissions" v-model="storePermissions" :native-value="permission" :key="permission">{{permission}}</b-checkbox-button>
       </b-field>
 
-      <a class="button is-warning" @click="$store.commit('logOut')" v-if="$store.state.logged_in">Logout</a>
+      <a class="button is-warning" @click="$store.commit('logOut')" v-if="$store.state.userdata">Logout</a>
 
     </div>
     
@@ -35,6 +32,21 @@ export default {
   computed: {
     userImg() {
       return defaultImg
+    },
+    validPermissions() {
+      if (this.$store.state.userdata)
+        return  this.$store.state.userdata.permissions
+      return []
+    },
+    storePermissions: {
+      get() {
+        return this.$store.state.filteredPermissions
+      },
+      set(v) {
+        v = v.filter(e => typeof e === 'string' || e instanceof String)
+
+        this.$store.commit('setFilteredPermissions', v)
+      }
     },
     showSettings: {
       get() {

@@ -10,21 +10,15 @@
 // @ is an alias to /src
 import Tile from '@/components/Tile.vue'
 
-class TileProp {
-  constructor(title, compName) {
-    this.title = title,
-    this.componentName = compName
-  }
-}
 
 export default {
   name: 'home',
   components: {
     Tile
   },
-  data() {
-    return {
-      tiles: [new TileProp('New Order', 'AddOrder')]
+  computed: {
+    tiles() {
+      return this.$store.getters.validTiles
     }
   }
 }
