@@ -69,8 +69,11 @@ export default {
    * @param {string} passw 
    */
   sendLoginRequest(username, passw) {
-    let req = this.buildReq('user.login', {user: username, password: passw})
+    this.sendRequest('user.login',  {user: username, password: passw})
+  },
 
+  sendRequest(method, payload) {
+    let req = this.buildReq(method, payload)
     this.rawsock.send(req)
   },
 

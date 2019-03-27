@@ -4,6 +4,11 @@ Todo:
   ✔ Implement login @started(19-03-24 14:54) @done(19-03-26 00:59) @lasted(1d10h5m55s)
   ✔ Convert all ElementUI components to buefy / bulma components @started(19-03-26 01:00) @done(19-03-26 23:18) @lasted(22h18m30s)
   ✔ Privileges implemented in db and backend @done(19-03-26 23:19)
-    ☐ test privilege in database @started(19-03-26 23:19)
-  ☐ Store user priveleges in the websocket client?
+    ✔ test privilege in database @started(19-03-26 23:19) @done(19-03-27 22:45) @lasted(23h26m37s)
+  ✔ Store user priveleges in the websocket client? @done(19-03-27 22:45)
   ☐ Router needs to get user data when cookies are set
+
+Admin:
+  ☐ Fetch list of users @started(19-03-27 22:47)
+  ☐ Display user-list
+  ☐ add functions to remove users and reset password

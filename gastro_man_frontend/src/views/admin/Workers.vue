@@ -13,6 +13,9 @@
 <script>
 export default {
   name: "workers",
+  mounted() {
+    this.$store.dispatch('getUserList')
+  },
   data() {
     return {
       columns: [

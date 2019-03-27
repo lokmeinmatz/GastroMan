@@ -15,6 +15,9 @@ export default new Vuex.Store({
     filteredPermissions: [],
     fullscreen: false,
     showSettings: false,
+    admin: {
+      allUsers: []
+    }
   },
   getters: {
     isLoggedIn: state => state.userdata != undefined,
@@ -105,6 +108,9 @@ export default new Vuex.Store({
           console.log('Fullscreen API is not supported.')
         }
       }
+    },
+    updateAdminAllUsers(state, ul) {
+      state.admin.allUsers = ul
     }
   },
   actions: {  
@@ -118,6 +124,10 @@ export default new Vuex.Store({
         socket.addListenerOnce('user.login.error', (e) => {reject(e)})
         socket.sendLoginRequest(username, password)
       })
+    },
+    getUserList(context) {
+      socket.addListenerConstant('admin.getusers.ret', (ul) => context.commit('updateAdminAllUsers', ul))
+      socket.sendRequest('admin.getusers', '')
     }
   }
 })

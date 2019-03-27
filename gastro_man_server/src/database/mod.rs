@@ -8,7 +8,7 @@ use crate::users::{User, UserPermissionFlags};
 use bounded_spsc_queue::{Producer};
 
 pub mod requests;
-use requests::{DBRequest, ResponseType};
+use requests::{DBRequest};
 
 pub mod sessions;
 
@@ -99,6 +99,7 @@ impl DBManager {
           match req {
             DBRequest::UserGetRequest(user_name, answer) => self.handle_user_get(user_name, answer),
             DBRequest::DeleteSessionRequest(sid) => self.delete_session(sid),
+            DBRequest::AdminUserListRequest(answer) => answer.push(Vec::new()),
             _ => {unimplemented!()}
           }
         },
@@ -109,15 +110,15 @@ impl DBManager {
     }
   }
 
-  fn handle_user_get(&mut self, user: String, answer: Producer<ResponseType>) {
+  fn handle_user_get(&mut self, user: String, answer: Producer<Option<User>>) {
     let mut stmt = self.con.prepare(format!("SELECT * FROM users WHERE user_name = '{}'", user)).expect("dbm > Cant create User exists query");
     if let sqlite::State::Row = stmt.next().unwrap() {
       match User::from_db(stmt, &mut self.sessions) {
         Ok(usr) => {
           println!("dbm > user exists");
-          answer.push(ResponseType::UserGetResponse(Some(usr)));
+          answer.push(Some(usr));
         },
-        Err(e) => {} // TODO: database error?
+        Err(_) => {answer.push(None)} // no user found
       }
     }
     else {
