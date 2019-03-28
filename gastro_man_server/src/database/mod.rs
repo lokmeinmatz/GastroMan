@@ -95,12 +95,11 @@ impl DBManager {
     loop {
       match self.db_query.1.recv() {
         Ok(req) => {
-          println!("dbm > Processing Request {:?}", req);
+          dbg!(&req);
           match req {
             DBRequest::UserGetRequest(user_name, answer) => self.handle_user_get(user_name, answer),
             DBRequest::DeleteSessionRequest(sid) => self.delete_session(sid),
-            DBRequest::AdminUserListRequest(answer) => answer.push(Vec::new()),
-            _ => {unimplemented!()}
+            DBRequest::AdminUserListRequest(answer) => self.handle_userlist(answer)
           }
         },
         Err(e) => eprintln!("dbm > Error while getting Request, {:?}", e)
@@ -113,9 +112,9 @@ impl DBManager {
   fn handle_user_get(&mut self, user: String, answer: Producer<Option<User>>) {
     let mut stmt = self.con.prepare(format!("SELECT * FROM users WHERE user_name = '{}'", user)).expect("dbm > Cant create User exists query");
     if let sqlite::State::Row = stmt.next().unwrap() {
-      match User::from_db(stmt, &mut self.sessions) {
+      match User::from_db(&stmt, &self.sessions) {
         Ok(usr) => {
-          println!("dbm > user exists");
+          self.sessions.insert(usr.id.expect("User::from_db did not set the id"), usr.session_id.clone().expect("User::from_db did not set a session_id"));
           answer.push(Some(usr));
         },
         Err(_) => {answer.push(None)} // no user found
@@ -125,6 +124,21 @@ impl DBManager {
       // no use matching
       // TODO: implement websocket response if no user matches
     }
+  }
+
+  fn handle_userlist(&mut self, answer: Producer<requests::AdminUserListResponse>) {
+    let mut users : Vec<User> = Vec::new();
+    
+    let mut stmt = self.con.prepare("SELECT * FROM users").expect("dbm > Cant create Userlist query");
+
+    while let sqlite::State::Row = stmt.next().unwrap() {
+      match User::from_db(&stmt, &self.sessions) {
+        Ok(usr) => {users.push(usr)},
+        Err(e) => eprintln!("{:?}", e)
+      }
+  }
+
+    answer.push(users);
   }
 
   fn delete_session(&mut self, sid: String) {

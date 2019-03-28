@@ -74,7 +74,8 @@ impl User {
     }
   }
 
-  pub fn from_db(statement: Statement, session_map: &mut std::collections::HashMap<usize, String>) -> Result<User, sqlite::Error> {
+  /// Does construct a new User from Database statement, but doesn't delete sessions!!
+  pub fn from_db(statement: &Statement, session_map: &std::collections::HashMap<usize, String>) -> Result<User, sqlite::Error> {
     let id = statement.read::<i64>(0)? as usize;
     let first_name = statement.read::<String>(1)?;
     let last_name = statement.read::<String>(2)?;
@@ -88,7 +89,6 @@ impl User {
       None => {
         // create hashed session id and store it together with user (for privelege test)
         let sid = sessions::generate_session_id(&user_name);
-        session_map.insert(id, sid.clone());
         Some(sid)
       }
     };

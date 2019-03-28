@@ -62,8 +62,6 @@ impl WSClient {
 
     match res {
       Some(user) => {
-        
-        println!("ws > User: {:?}", &user);
 
         if user.pw_hash == Some(pw_hashed) {
           // if request came with diffrent sessionID, make sure to delete, as well as other sessions of this user

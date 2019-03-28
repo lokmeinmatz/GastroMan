@@ -17,6 +17,13 @@ export default {
     return {
     }
   },
+  mounted() {
+    this.$socket.addListenerConstant('permissionerror', () => this.$dialog.alert({
+      title: 'Permission denied',
+      message: 'You don\'t have the permission to perform this action.',
+      type: 'is-danger'
+    }))
+  },
   computed: {
     subPath() {
       let parts = this.$route.path.split('/').filter(v => v.length > 0)

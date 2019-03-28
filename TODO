@@ -8,7 +8,12 @@ Todo:
   ✔ Store user priveleges in the websocket client? @done(19-03-27 22:45)
   ☐ Router needs to get user data when cookies are set
 
+Login:
+  ☐ Info about ws-connection doesn't get updated
+
 Admin:
-  ☐ Fetch list of users @started(19-03-27 22:47)
-  ☐ Display user-list
+  ✔ Fetch list of users @started(19-03-27 22:47) @done(19-03-28 14:02) @lasted(15h15m41s)
+  ✔ Display user-list @done(19-03-28 14:02)
+  ☐ Update user permissions @started(19-03-28 14:03)
+  ☐ permission validation
   ☐ add functions to remove users and reset password

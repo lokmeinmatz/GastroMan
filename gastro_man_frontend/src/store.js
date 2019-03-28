@@ -128,6 +128,13 @@ export default new Vuex.Store({
     getUserList(context) {
       socket.addListenerConstant('admin.getusers.ret', (ul) => context.commit('updateAdminAllUsers', ul))
       socket.sendRequest('admin.getusers', '')
+    },
+    updateUserPermission(context, {user_name, permissions}) {
+      return new Promise((resolve) => {
+        socket.sendRequest('admin.user.update.permission', {user_name: user_name, permissions: permissions})
+        socket.addListenerOnce('admin.user.update.permission.ret', () => resolve())
+      })
+      
     }
   }
 })
