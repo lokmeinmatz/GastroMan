@@ -29,6 +29,10 @@ impl UserPermissionFlags {
 
     elmts.iter().map(|e| String::from(*e)).collect()
   }
+
+  pub fn is_admin(&self) -> bool {
+    self.0 & 0b001000 != 0
+  }
 }
 
 impl From<Vec<String>> for UserPermissionFlags {
@@ -75,7 +79,7 @@ impl User {
   }
 
   /// Does construct a new User from Database statement, but doesn't delete sessions!!
-  pub fn from_db(statement: &Statement, session_map: &std::collections::HashMap<usize, String>) -> Result<User, sqlite::Error> {
+  pub fn from_db(statement: &Statement, session_map: &std::collections::HashMap<String, usize>) -> Result<User, sqlite::Error> {
     let id = statement.read::<i64>(0)? as usize;
     let first_name = statement.read::<String>(1)?;
     let last_name = statement.read::<String>(2)?;
@@ -84,7 +88,7 @@ impl User {
     let perm_flags = statement.read::<i64>(5)? as u64;
 
     // get session id
-    let session_id = match session_map.get(&id) {
+    let session_id = match session_map.iter().find(|(k, v)| *v == &id) {
       Some(ref_sid) => Some(ref_sid.clone()),
       None => {
         // create hashed session id and store it together with user (for privelege test)

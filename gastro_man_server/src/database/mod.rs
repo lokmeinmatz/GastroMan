@@ -24,7 +24,8 @@ pub enum UserError {
 pub struct DBManager {
   con: sqlite::Connection,
   db_query: (mpsc::Sender<DBRequest>, mpsc::Receiver<DBRequest>),
-  sessions: HashMap<usize, String>
+  /// map sid to user id
+  sessions: HashMap<String, usize> 
 }
 
 impl DBManager {
@@ -99,7 +100,8 @@ impl DBManager {
           match req {
             DBRequest::UserGetRequest(user_name, answer) => self.handle_user_get(user_name, answer),
             DBRequest::DeleteSessionRequest(sid) => self.delete_session(sid),
-            DBRequest::AdminUserListRequest(answer) => self.handle_userlist(answer)
+            DBRequest::AdminUserListRequest(answer) => self.handle_userlist(answer),
+            DBRequest::PermissionsGetRequest(sid, answer) => self.handle_permissionsget(sid, answer)
           }
         },
         Err(e) => eprintln!("dbm > Error while getting Request, {:?}", e)
@@ -108,13 +110,18 @@ impl DBManager {
       std::thread::yield_now();
     }
   }
+  
+  fn handle_permissionsget(&mut self, sid: String, answer: Producer<requests::PermissionsGetResponse>) {
+    //get user from sid
+    //match self.sessions.get(&sid)
+  }
 
   fn handle_user_get(&mut self, user: String, answer: Producer<Option<User>>) {
     let mut stmt = self.con.prepare(format!("SELECT * FROM users WHERE user_name = '{}'", user)).expect("dbm > Cant create User exists query");
     if let sqlite::State::Row = stmt.next().unwrap() {
       match User::from_db(&stmt, &self.sessions) {
         Ok(usr) => {
-          self.sessions.insert(usr.id.expect("User::from_db did not set the id"), usr.session_id.clone().expect("User::from_db did not set a session_id"));
+          self.sessions.insert(usr.session_id.clone().expect("User::from_db did not set a session_id"), usr.id.expect("User::from_db did not set the id"));
           answer.push(Some(usr));
         },
         Err(_) => {answer.push(None)} // no user found
@@ -142,11 +149,7 @@ impl DBManager {
   }
 
   fn delete_session(&mut self, sid: String) {
-    let key = match self.sessions.iter().find_map(|(k, v)| {if v == &sid {Some(k)} else {None}}) {
-      Some(key) => *key,
-      None => return
-    };
-    self.sessions.remove(&key);
+    self.sessions.remove(&sid);
   }
 
 

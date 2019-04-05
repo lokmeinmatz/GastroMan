@@ -3,6 +3,7 @@ use ws::{Handler, Handshake, Message, Sender};
 
 pub mod json_structs;
 mod methods;
+mod admin_handler;
 use crate::database::requests;
 use json_structs::{LoginRequest, WebUser};
 use std::sync::mpsc;
@@ -10,28 +11,50 @@ use std::sync::mpsc;
 use sha3::{Digest, Sha3_256};
 
 
-const DB_OFFLINE_ERR : &str = "ws > DB is not reachable";
+pub const DB_OFFLINE_ERR : &str = "ws > DB is not reachable";
 
 pub struct WSClient {
-  out: Sender,
-  db_query: mpsc::Sender<requests::DBRequest>,
+  pub out: Sender,
+  pub db_query: mpsc::Sender<requests::DBRequest>,
 }
 
 /// (sessionID, Method, Data)
-type RawMsg = (String, String, String);
+pub type RawMsg = (String, String, String);
 
 impl WSClient {
   pub fn new(out: Sender, db_query: mpsc::Sender<requests::DBRequest>) -> Self {
     WSClient { out, db_query }
   }
 
+  /// blocks efficiently until db has answered
+  pub fn wait_for_query_res<T>(cons: bounded_spsc_queue::Consumer<T>) -> T {
+    loop {
+      match cons.try_pop() {
+        Some(a) => break a,
+        None => {
+          
+          std::thread::sleep(std::time::Duration::from_micros(100));
+          continue;
+        }
+      }
+    }
+  }
+
   /// Takes the sessionID, the method and the data as strings
   fn evaluate_message(&mut self, msg: RawMsg) -> ws::Result<()> {
+    if msg.1.starts_with("admin") {
+      return admin_handler::handle_admin_msg(self, msg)
+    }
+
     match msg.1.as_ref() {
       methods::USER_LOGIN => self.handle_login(msg),
       methods::ADMIN_GETUSERS => self.handle_getusers(msg),
       _ => {eprintln!("ws > unknown method : {}", &msg.1); Err(ws::Error::new(ws::ErrorKind::Protocol, ""))},
     }
+  }
+
+  fn send_permission_error(&mut self, session_id: &str) -> ws::Result<()> {
+    self.out.send(Self::format(session_id, methods::PERMISSION_ERROR, " "))
   }
 
   fn handle_login(&mut self, msg: RawMsg) -> ws::Result<()> {
@@ -48,17 +71,7 @@ impl WSClient {
     pw_hashed.input(payload.password);
     let pw_hashed = format!("{:x}", pw_hashed.result());
 
-    let res: requests::UserGetResponse = loop {
-      match cons.try_pop() {
-        Some(a) => break a,
-        None => {
-          
-          std::thread::sleep(std::time::Duration::from_micros(100));
-          continue;
-        }
-      }
-    };
-
+    let res: requests::UserGetResponse = Self::wait_for_query_res(cons);
 
     match res {
       Some(user) => {
