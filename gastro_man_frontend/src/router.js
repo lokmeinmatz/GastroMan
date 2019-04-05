@@ -47,7 +47,7 @@ router.beforeEach((to, from, next) => {
   let sid = Cookie.get('sid')
   let uname = Cookie.get("user")
   if (sid != undefined && sid != 'undefined' && uname != undefined && uname != 'undefined' && sid.length > 5 && uname.length > 1) {
-    Store.commit('setLoggedIn', {username: uname, sessionID: sid})
+    Store.dispatch('tryLoginAsync', {username: uname, sid})
   }
 
   // redirect to login page if not logged in and trying to access a restricted page

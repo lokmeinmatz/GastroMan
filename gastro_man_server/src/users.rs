@@ -14,7 +14,7 @@ pub struct User {
 }
 
 #[derive(Debug)]
-pub struct UserPermissionFlags (pub u64);
+pub struct UserPermissionFlags (pub i64);
 
 impl UserPermissionFlags {
   pub const ADMIN: UserPermissionFlags = UserPermissionFlags(0b001000);
@@ -37,7 +37,7 @@ impl UserPermissionFlags {
 
 impl From<Vec<String>> for UserPermissionFlags {
   fn from(vec: Vec<String>) -> Self {
-    let mut res = 0u64;
+    let mut res = 0i64;
     for el in &vec {
       match el.as_str() {
         "waiter"  => res |= 0b000001,
@@ -62,7 +62,7 @@ impl User {
       user_name,
       first_name,
       last_name,
-      permissions: perm_flags.unwrap_or(UserPermissionFlags(0b0001u64))
+      permissions: perm_flags.unwrap_or(UserPermissionFlags(0b0001i64))
     }
   }
 
@@ -74,7 +74,7 @@ impl User {
       user_name,
       first_name,
       last_name,
-      permissions: perm_flags.unwrap_or(UserPermissionFlags(0b0001u64))
+      permissions: perm_flags.unwrap_or(UserPermissionFlags(0b0001i64))
     }
   }
 
@@ -85,11 +85,11 @@ impl User {
     let last_name = statement.read::<String>(2)?;
     let user_name = statement.read::<String>(3)?;
     let pw_hash = statement.read::<String>(4)?;
-    let perm_flags = statement.read::<i64>(5)? as u64;
+    let perm_flags = statement.read::<i64>(5)?;
 
     // get session id
-    let session_id = match session_map.iter().find(|(k, v)| *v == &id) {
-      Some(ref_sid) => Some(ref_sid.clone()),
+    let session_id : Option<String> = match session_map.iter().find(|(k, v)| *v == &id) {
+      Some(ref_sid) => Some(ref_sid.0.clone()),
       None => {
         // create hashed session id and store it together with user (for privelege test)
         let sid = sessions::generate_session_id(&user_name);

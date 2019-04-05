@@ -22,7 +22,7 @@ impl std::fmt::Debug for DBRequest {
       DBRequest::UserGetRequest(req, _) => write!(f, "UserGetRequest {{req: {:?}}}", &req),
       DBRequest::DeleteSessionRequest(req) => write!(f, "DeleteSessionRequest {{req: {:?}}}", &req),
       DBRequest::AdminUserListRequest(_) => write!(f, "AdminUserListRequest {{}}"),
-      DBRequest::PermissionsGetRequest(req, _) => write!(f, "DeleteSessionRequest {{req: {:?}}}", &req),
+      DBRequest::PermissionsGetRequest(req, _) => write!(f, "PermissionsGetRequest {{req: {:?}}}", &req),
     }
   }
 }

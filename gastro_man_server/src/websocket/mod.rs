@@ -14,7 +14,8 @@ use sha3::{Digest, Sha3_256};
 pub const DB_OFFLINE_ERR : &str = "ws > DB is not reachable";
 
 pub struct WSClient {
-  pub out: Sender,
+  out: Sender,
+  sid: Option<String>,
   pub db_query: mpsc::Sender<requests::DBRequest>,
 }
 
@@ -23,17 +24,23 @@ pub type RawMsg = (String, String, String);
 
 impl WSClient {
   pub fn new(out: Sender, db_query: mpsc::Sender<requests::DBRequest>) -> Self {
-    WSClient { out, db_query }
+    WSClient { out, db_query, sid: None }
   }
 
   /// blocks efficiently until db has answered
   pub fn wait_for_query_res<T>(cons: bounded_spsc_queue::Consumer<T>) -> T {
+    let mut start = std::time::Instant::now();
     loop {
       match cons.try_pop() {
         Some(a) => break a,
         None => {
           
-          std::thread::sleep(std::time::Duration::from_micros(100));
+          std::thread::sleep(std::time::Duration::from_micros(200));
+          if start.elapsed().as_secs() > 1 {
+            eprintln!("ws > db-query takes wayy to long!");
+            start = std::time::Instant::now();
+
+          }
           continue;
         }
       }
@@ -41,25 +48,35 @@ impl WSClient {
   }
 
   /// Takes the sessionID, the method and the data as strings
-  fn evaluate_message(&mut self, msg: RawMsg) -> ws::Result<()> {
+  fn evaluate_message(&mut self, msg: RawMsg) {
+    println!("ws > Handling request : {}", &msg.1);
+
     if msg.1.starts_with("admin") {
       return admin_handler::handle_admin_msg(self, msg)
     }
 
     match msg.1.as_ref() {
-      methods::USER_LOGIN => self.handle_login(msg),
-      methods::ADMIN_GETUSERS => self.handle_getusers(msg),
-      _ => {eprintln!("ws > unknown method : {}", &msg.1); Err(ws::Error::new(ws::ErrorKind::Protocol, ""))},
+      methods::USER_LOGIN_PW => self.handle_login_by_pw(msg),
+      methods::USER_LOGIN_SID => self.handle_login_by_sid(msg),
+      _ => {eprintln!("ws > unknown method : {}", &msg.1);}
     }
   }
 
-  fn send_permission_error(&mut self, session_id: &str) -> ws::Result<()> {
-    self.out.send(Self::format(session_id, methods::PERMISSION_ERROR, " "))
+  pub fn send(&mut self, method: &str, payload: &str) {
+    match self.sid.as_ref() {
+      Some(sid) => self.out.send(Self::format(sid, method, payload)).expect("WS closed"),
+      None => self.out.send(Self::format("0", method, payload)).expect("WS closed")
+    }
   }
 
-  fn handle_login(&mut self, msg: RawMsg) -> ws::Result<()> {
+  fn send_permission_error(&mut self, err: &str) {
+    self.send(methods::PERMISSION_ERROR, &format!("{{\"msg\": \"Permission-Error: {}\"}}", err));
+  }
+
+  fn handle_login_by_pw(&mut self, msg: RawMsg) {
     let payload: LoginRequest =
       serde_json::from_str(msg.2.as_ref()).expect("ws > Error while parsing payload");
+    let password = payload.password.unwrap_or(String::new());
     let (prod, cons) = bounded_spsc_queue::make(2);
 
     // preprare database request
@@ -68,7 +85,7 @@ impl WSClient {
 
     // hash pw while waiting for database
     let mut pw_hashed = Sha3_256::new();
-    pw_hashed.input(payload.password);
+    pw_hashed.input(password);
     let pw_hashed = format!("{:x}", pw_hashed.result());
 
     let res: requests::UserGetResponse = Self::wait_for_query_res(cons);
@@ -88,49 +105,51 @@ impl WSClient {
             .expect("ws > user has no sessionid")
             .clone();
           let serial_user: WebUser = user.into();
+          self.sid = Some(sid);
 
-          self
-            .out
-            .send(Self::format(
-              &sid,
-              methods::USER_LOGIN_SUCCESS,
-              &serde_json::to_string(&serial_user).expect("Could not parse serial_user"),
-            ))
-            ?;
+          self.send(methods::USER_LOGIN_SUCCESS, &serde_json::to_string(&serial_user).expect("Could not parse serial_user"));
         }
         else {
           // user entered wrong password
-          self.out.send(Self::format("0", methods::USER_LOGIN_ERROR, "{\"error\":\"Password incorrect\"}"))?;
+          self.send(methods::USER_LOGIN_ERROR, "{\"error\":\"Password incorrect\"}");
         }
       },
       None => {
-        self.out.send(Self::format("0", methods::USER_LOGIN_ERROR, "{\"error\":\"Username unknown\"}"))?;
+        self.send(methods::USER_LOGIN_ERROR, "{\"error\":\"Username unknown\"}");
       }
     }
-    Ok(())
   }
-  fn handle_getusers(&mut self, _msg: RawMsg) -> ws::Result<()> {
+
+  fn handle_login_by_sid(&mut self, msg: RawMsg) {
+    let payload: LoginRequest =
+      serde_json::from_str(msg.2.as_ref()).expect("ws > Error while parsing payload");
     let (prod, cons) = bounded_spsc_queue::make(2);
 
     // preprare database request
-    let req = requests::DBRequest::AdminUserListRequest(prod);
+    let req = requests::DBRequest::UserGetRequest(payload.user, prod);
     self.db_query.send(req).expect(DB_OFFLINE_ERR);
+    let res: requests::UserGetResponse = Self::wait_for_query_res(cons);
 
-    let res: requests::AdminUserListResponse = loop {
-      match cons.try_pop() {
-        Some(a) => break a,
-        None => {
-          
-          std::thread::sleep(std::time::Duration::from_micros(100));
+    match res {
+      Some(user) => {
 
-          continue;
+        if user.session_id == payload.sid {
+          // if request came with diffrent sessionID, make sure to delete, as well as other sessions of this user
+  
+          let serial_user: WebUser = user.into();
+          self.sid = payload.sid;
+
+          self.send(methods::USER_LOGIN_SUCCESS, &serde_json::to_string(&serial_user).expect("Could not parse serial_user"));
         }
+        else {
+          // user entered wrong password
+          self.send(methods::USER_LOGIN_ERROR, "{\"error\":\"Session invalid\"}");
+        }
+      },
+      None => {
+        self.send(methods::USER_LOGIN_ERROR, "{\"error\":\"Username unknown\"}");
       }
-    };
-
-    let wusrs : Vec<WebUser> = res.into_iter().map(|e| e.into()).collect();
-
-    self.out.send(Self::format("0", methods::ADMIN_GETUSERS_RET, &serde_json::to_string(&wusrs).expect("Could not parse userlist")))
+    }
   }
 
   /// packs the session id, the method ad payload into an string
@@ -141,7 +160,7 @@ impl WSClient {
 
 impl Handler for WSClient {
   fn on_open(&mut self, _: Handshake) -> ws::Result<()> {
-    self.out.send("Hello WebSocket")
+    Ok(())
   }
 
   fn on_message(&mut self, msg: Message) -> ws::Result<()> {
@@ -153,7 +172,7 @@ impl Handler for WSClient {
         if let Some((uid, method, data)) =
           t.split(std::str::from_utf8(&[31]).unwrap()).tuples().next()
         {
-          self.evaluate_message((uid.to_owned(), method.to_owned(), data.to_owned()))?;
+          self.evaluate_message((uid.to_owned(), method.to_owned(), data.to_owned()));
         } else {
           eprintln!("ws > Received invalid message. Too many or few | splitters");
         }

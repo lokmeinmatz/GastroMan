@@ -18,9 +18,9 @@ export default {
     }
   },
   mounted() {
-    this.$socket.addListenerConstant('permissionerror', () => this.$dialog.alert({
+    this.$socket.addListenerConstant('permissionerror', (e) => this.$dialog.alert({
       title: 'Permission denied',
-      message: 'You don\'t have the permission to perform this action.',
+      message: e.msg,
       type: 'is-danger'
     }))
   },

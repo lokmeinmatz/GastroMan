@@ -5,7 +5,8 @@ use crate::users::User;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LoginRequest {
     pub user: String,
-    pub password: String,
+    pub password: Option<String>,
+    pub sid: Option<String>
 }
 
 /// The part of user-struct the client gets

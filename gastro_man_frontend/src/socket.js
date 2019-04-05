@@ -29,7 +29,7 @@ export default {
 
       if (sid == undefined || method == undefined || payload == undefined) return
       // eslint-disable-next-line
-      console.log(`Received message under session-id ${sid} with method ${method} and payload ${payload}`)
+      console.log(`Received s-id ${sid} method ${method} payload ${payload}`)
 
       const cb = this._listeners.get(method)
 
@@ -69,11 +69,17 @@ export default {
    * @param {string} passw 
    */
   sendLoginRequest(username, passw) {
-    this.sendRequest('user.login',  {user: username, password: passw})
+    this.sendRequest('user.login.pw',  {user: username, password: passw})
+  },
+
+  sendReLoginRequest(username, sid) {
+    this.sendRequest('user.login.sid',  {user: username, sid: sid})
   },
 
   sendRequest(method, payload) {
     let req = this.buildReq(method, payload)
+    // eslint-disable-next-line
+    console.log(`Sending request ${method}`)
     this.rawsock.send(req)
   },
 
