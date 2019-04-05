@@ -52,7 +52,6 @@ export default new Vuex.Store({
   },
   mutations: {
     setLoggedIn(state, login_data) {
-      console.log(login_data)
       state.userdata = login_data
       Cookie.set('user', login_data.user_name)
       Cookie.set('sid', login_data.sessionID)

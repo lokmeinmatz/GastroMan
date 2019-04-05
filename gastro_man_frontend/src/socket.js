@@ -24,6 +24,7 @@ export default {
     Vue.prototype.$socket = this
     this.try_connecting_ws()
 
+
     this.rawsock.onmessage = (msg) => {
       let [sid, method, payload] = msg.data.split('\u001f')
 

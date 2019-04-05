@@ -2,7 +2,7 @@
   <div class="login">
     <div class="card">
       <div class="card-header">
-        <b-notification class="con-state" :type="stateStyle" :closable="false">{{stateMsg}}</b-notification>
+        <b-notification class="con-state" :type="stateStyle()" :closable="false">{{stateMsg()}}</b-notification>
       </div>
       <form class="section" @submit.prevent="try_login()">
         <b-field label="Username">
@@ -58,10 +58,8 @@ export default {
             type: "is-error"
           });
         });
-    }
-  },
+    },
 
-  computed: {
     stateStyle() {
       const rs = this.$socket.rawsock.readyState;
       if (rs == 0) return "is-warning";
