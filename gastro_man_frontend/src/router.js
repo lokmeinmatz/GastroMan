@@ -3,7 +3,6 @@ import Router from 'vue-router'
 import Home from './views/Home.vue'
 import Login from './views/Login.vue'
 import Store from './store'
-import Cookie from 'js-cookie'
 
 Vue.use(Router)
 
@@ -43,12 +42,8 @@ const router = new Router({
 
 router.beforeEach((to, from, next) => {
 
-  //check if user was logged in before
-  let sid = Cookie.get('sid')
-  let uname = Cookie.get("user")
-  if (sid != undefined && sid != 'undefined' && uname != undefined && uname != 'undefined' && sid.length > 5 && uname.length > 1) {
-    Store.commit('setLoggedIn', {username: uname, sessionID: sid})
-  }
+  
+  
 
   // redirect to login page if not logged in and trying to access a restricted page
   const publicPages = ['/login'];

@@ -15,6 +15,9 @@ export default new Vuex.Store({
     filteredPermissions: [],
     fullscreen: false,
     showSettings: false,
+    admin: {
+      allUsers: []
+    }
   },
   getters: {
     isLoggedIn: state => state.userdata != undefined,
@@ -50,7 +53,7 @@ export default new Vuex.Store({
   mutations: {
     setLoggedIn(state, login_data) {
       state.userdata = login_data
-      Cookie.set('user', login_data.username)
+      Cookie.set('user', login_data.user_name)
       Cookie.set('sid', login_data.sessionID)
 
       state.filteredPermissions = login_data.permissions
@@ -105,10 +108,17 @@ export default new Vuex.Store({
           console.log('Fullscreen API is not supported.')
         }
       }
+    },
+    updateAdminAllUsers(state, ul) {
+      state.admin.allUsers = ul
     }
   },
   actions: {  
-    tryLoginAsync(context, {username, password}) {
+    tryLoginAsync(context, pl) {
+      // try login either by password or by sid
+      const username = pl.username
+
+      
       return new Promise((resolve, reject) => {
         // eslint-disable-next-line
         socket.addListenerOnce('user.login.success', (r) => {
@@ -116,8 +126,28 @@ export default new Vuex.Store({
           resolve(r)
         })
         socket.addListenerOnce('user.login.error', (e) => {reject(e)})
-        socket.sendLoginRequest(username, password)
+
+        if (pl.password != undefined) {
+          socket.sendLoginRequest(username, pl.password)
+        }
+        else if (pl.sid != undefined) {
+          socket.sendReLoginRequest(username, pl.sid)
+        }
       })
+
+      
+    },
+    getUserList(context) {
+
+      socket.addListenerConstant('admin.getusers.ret', (ul) => context.commit('updateAdminAllUsers', ul))
+      socket.sendRequest('admin.getusers', '')
+    },
+    updateUserPermission(context, {user_name, permissions}) {
+      return new Promise((resolve) => {
+        socket.sendRequest('admin.user.update.permission', {user_name: user_name, permissions: permissions})
+        socket.addListenerOnce('admin.user.update.permission.ret', () => resolve())
+      })
+      
     }
   }
 })

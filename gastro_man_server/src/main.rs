@@ -7,7 +7,6 @@ mod database;
 use database::DBManager;
 
 mod users;
-use users::User;
 
 mod websocket;
 use websocket::WSClient;
@@ -21,9 +20,9 @@ fn main() {
     let local_db_query_sender = db.get_query_sender();
 
 
-    thread::spawn(move || {
+    thread::Builder::new().name("Database".to_owned()).spawn(move || {
         db.run();
-    });
+    }).expect("This system does not support threads.");
 
 
     //let clients : Vec<WSClient> = Vec::with_capacity(3);

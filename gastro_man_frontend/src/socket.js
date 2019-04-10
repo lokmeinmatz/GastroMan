@@ -14,6 +14,8 @@ export default {
    */
   rawsock: undefined,
 
+  /**@type {Array<String>} */
+  beforeOpenQueue: [],
 
   /**
    * @type {Map<String, Callback>}
@@ -24,12 +26,20 @@ export default {
     Vue.prototype.$socket = this
     this.try_connecting_ws()
 
+    this.rawsock.onopen = () => {
+      for (let req of this.beforeOpenQueue) {
+        this.rawsock.send(req)
+      }
+      this.beforeOpenQueue.length = 0
+    }
+
+
     this.rawsock.onmessage = (msg) => {
       let [sid, method, payload] = msg.data.split('\u001f')
 
       if (sid == undefined || method == undefined || payload == undefined) return
       // eslint-disable-next-line
-      console.log(`Received message under session-id ${sid} with method ${method} and payload ${payload}`)
+      console.log(`Received s-id ${sid} method ${method} payload ${payload}`)
 
       const cb = this._listeners.get(method)
 
@@ -69,9 +79,31 @@ export default {
    * @param {string} passw 
    */
   sendLoginRequest(username, passw) {
-    let req = this.buildReq('user.login', {user: username, password: passw})
+    this.sendRequest('user.login.pw',  {user: username, password: passw})
+  },
 
-    this.rawsock.send(req)
+  sendReLoginRequest(username, sid) {
+    this.sendRequest('user.login.sid',  {user: username, sid: sid})
+  },
+
+  sendRequest(method, payload) {
+    let req = this.buildReq(method, payload)
+
+    if (this.rawsock.readyState != this.rawsock.OPEN) {
+      // eslint-disable-next-line
+      console.log(`Caching request ${method}, sockstate: ${this.rawsock.readyState}`)
+      this.beforeOpenQueue.push(req)
+      return
+    }
+
+    // eslint-disable-next-line
+    console.log(`Sending request ${method}, sockstate: ${this.rawsock.readyState}`)
+    try {
+      this.rawsock.send(req)
+    } catch (error) {
+      // eslint-disable-next-line
+      console.error(error)
+    }
   },
 
   /**
