@@ -22,8 +22,20 @@
   </div>
 </template>
 <script>
+
+import Cookie from 'js-cookie'
+
 export default {
   name: "Login-View",
+  mounted() {
+    //check if user was logged in before
+    let sid = Cookie.get('sid')
+    let uname = Cookie.get("user")
+    if (sid != undefined && sid != 'undefined' && uname != undefined && uname != 'undefined' && sid.length > 5 && uname.length > 1) {
+      this.try_login(uname, sid)
+    }
+  },
+
   data() {
     return {
       form: {
@@ -34,16 +46,19 @@ export default {
     };
   },
   methods: {
-    try_login() {
-      if (this.form.username.length == 0 || this.form.pw.length == 0) return;
+    try_login(uname, sid) {
+      if (uname == undefined && sid == undefined && (this.form.username.length == 0 || this.form.pw.length == 0)) return;
       // eslint-disable-next-line
       console.log("Trying to login...");
       this.loading = true;
       //this.$socket.try_login(this.username, this.pw)
       this.$store
-        .dispatch("tryLoginAsync", {
+        .dispatch("tryLoginAsync", (sid == undefined || uname == undefined) ? {
           password: this.form.pw,
           username: this.form.username
+        } : {
+          username: uname,
+          sid: sid
         })
         .then(() => {
           
